@@ -1,0 +1,136 @@
+#!/usr/bin/python3
+
+import sys
+import os
+
+import soundcloud
+
+import urllib
+import urllib.request
+
+
+
+# Setup API id
+client = soundcloud.Client(client_id='b45b1aa10f1ac2941910a7f0d10f8e28')
+# Default download directory
+targetdir = "./"
+
+
+
+def main():
+	"""
+	
+	Parses the CLI arguments and passes the URL to the url parser
+
+	"""
+	print("Soundcloud-dl python3")
+
+	# if a parameter is specified
+	if len(sys.argv)>1:
+		# Loop through all options
+		argc = 1
+		while argc < len(sys.argv):
+			argv = sys.argv[argc]
+			if argv[0]=='-':
+				# Print help message
+				if argv[1] == 'h':
+					print_help()
+					return
+				elif argv[1] == 'd':
+					argc+=1
+					global targetdir
+					targetdir = sys.argv[argc]
+					print("Targetdir set to " + sys.argv[argc])
+				else:
+					print("Unknown parameter " + argv[1:])
+			else:
+				parse_url(argv)
+			argc+=1
+	# If there are no parameters, simply print the help text
+	else:
+		print_help()
+
+
+def get_item(track_url):
+	"""
+	
+	Fetches metadata for an track or playlist
+	
+	"""
+	# Fetches metadata from soundcloud
+	try:
+		item = client.get('/resolve', url=track_url)
+	except Exception as e:
+		print("Could not resolve url " + track_url)
+		print(e, exc_info=True)
+		return False 
+	return item
+
+
+
+def parse_url(track_url):
+	"""
+	
+	Detects if the URL is a track or playlists, and parses the track(s) to the track downloader
+	
+	"""
+	
+	item = get_item(track_url)
+	if not item:
+		return
+
+	if item.kind == 'track':
+		print("Found a track")
+		download_track(item)
+	
+	elif item.kind == "playlist":
+		print("Found a playlist")
+		for track_raw in item.tracks:
+			track = get_item(track_raw["permalink_url"])
+			if item:
+				download_track(track)
+			else:
+				print("Could not find track " + track_raw["title"])
+	else:
+		print("Unknown item type")
+
+
+
+def download_track(track):
+	"""
+	
+	Downloads a track
+	
+	"""
+
+	stream_url = client.get(track.stream_url, allow_redirects=False)
+
+	url = stream_url.location
+	title = track.title
+
+	path = os.path.join(targetdir + "/", title + '.mp3')
+	print("Downloading " + title)
+	urllib.request.urlretrieve(url, path)
+
+
+
+def print_help():
+	print(
+"""
+Usage
+	soundcloud-dl [OPTIONS] [URL]
+	
+	The URL can either be a track or a playlist, for example:
+		https://soundcloud.com/user/song-name
+		https://soundcloud.com/user/sets/set-name
+
+Options
+	-d		more output info for debugging
+	-h		shows this help dialog
+"""
+	)
+
+
+
+if __name__ == "__main__":
+	main()
