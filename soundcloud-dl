@@ -125,8 +125,8 @@ Usage
 		https://soundcloud.com/user/sets/set-name
 
 Options
-	-d		more output info for debugging
-	-h		shows this help dialog
+	-d [DIR]	select a target directory for downloads
+	-h			shows this help dialog
 """
 	)
 
